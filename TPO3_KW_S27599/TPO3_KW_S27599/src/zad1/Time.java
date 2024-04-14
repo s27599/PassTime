@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
+import java.time.chrono.ChronoLocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.TextStyle;
@@ -25,26 +26,31 @@ public class Time {
                 Duration between = Duration.between(fromTime, toTime);
 
                 StringBuilder info = new StringBuilder();
-                info.append("OD ").append(fromTime.getDayOfMonth())
-                        .append(" ").append(fromTime.getMonth().getDisplayName(TextStyle.FULL, new Locale("pl","PL"))).append(" ")
-                            .append(fromTime.getYear()).append(" (").append(fromTime.getDayOfWeek().
-                                getDisplayName(TextStyle.FULL, new Locale("pl","PL")));
-
-                info.append(") do ").append(toTime.getDayOfMonth()).append(" ").append(toTime.getMonth().getDisplayName(TextStyle.FULL,new Locale("pl","PL")))
-                        .append(" ").append(toTime.getYear()).append(" (").append(toTime.getDayOfWeek().
-                                getDisplayName(TextStyle.FULL, new Locale("pl","PL"))).append(")\n");
-
-                StringBuilder nonCalendar = new StringBuilder();
-                nonCalendar.append(" - mija: ");
-                if (between.toDays() == 1) {
-                    nonCalendar.append("1 dzień, ");
+                info.append("Od ").append(fromTime.getDayOfMonth())
+                        .append(" ").append(fromTime.getMonth().getDisplayName(TextStyle.FULL, new Locale("pl", "PL"))).append(" ")
+                        .append(fromTime.getYear()).append(" (").append(fromTime.getDayOfWeek().
+                                getDisplayName(TextStyle.FULL, new Locale("pl", "PL"))).append(") godz. ")
+                        .append(fromTime.getHour()).append(":");
+                if (fromTime.getMinute() < 10) {
+                    info.append("0").append(fromTime.getMinute());
                 } else {
-                    nonCalendar.append(between.toDays() + " dni, ");
+                    info.append(fromTime.getMinute());
                 }
 
-                double weeks = (double) between.toDays() / 7.0;
-                nonCalendar.append((double) Math.round(weeks * 100) / 100.0);
-                nonCalendar.append(" tygodni");
+
+                info.append(" do ").append(toTime.getDayOfMonth()).append(" ").append(toTime.getMonth().getDisplayName(TextStyle.FULL, new Locale("pl", "PL")))
+                        .append(" ").append(toTime.getYear()).append(" (").append(toTime.getDayOfWeek().
+                                getDisplayName(TextStyle.FULL, new Locale("pl", "PL"))).append(") godz. ")
+                        .append(toTime.getHour()).append(":");
+                if (toTime.getMinute() < 10) {
+                    info.append("0").append(toTime.getMinute());
+                } else {
+                    info.append(toTime.getMinute());
+                }
+                info.append("\n");
+
+
+                StringBuilder nonCalendar = getNonCalendarStringBuilder(between);
 
                 nonCalendar.append("\n - godzin: ");
                 nonCalendar.append(between.toHours());
@@ -57,17 +63,33 @@ public class Time {
                 StringBuilder sb = getCalendarStringBuilder(tmpLocalDateFrom, tmpLocalDateTo);
 
 
-                return info.toString()+nonCalendar.toString()+sb.toString();
+                return info.toString() + nonCalendar.toString() + sb.toString();
             }
-        } catch (DateTimeParseException e) {
-            return ("*** " + e);
+//bez godziny
 
-        }
-        try {
+
             LocalDate fromDate = LocalDate.parse(from);
             LocalDate toDate = LocalDate.parse(to);
-            StringBuilder sb = getCalendarStringBuilder(fromDate, toDate);
-            return String.valueOf(fromDate) + " " + String.valueOf(toDate) + sb.toString();
+
+            StringBuilder info = new StringBuilder();
+            info.append("Od ").append(fromDate.getDayOfMonth())
+                    .append(" ").append(fromDate.getMonth().getDisplayName(TextStyle.FULL, new Locale("pl", "PL"))).append(" ")
+                    .append(fromDate.getYear()).append(" (").append(fromDate.getDayOfWeek().
+                            getDisplayName(TextStyle.FULL, new Locale("pl", "PL"))).append(")");
+
+
+
+            info.append(" do ").append(toDate.getDayOfMonth()).append(" ").append(toDate.getMonth().getDisplayName(TextStyle.FULL, new Locale("pl", "PL")))
+                    .append(" ").append(toDate.getYear()).append(" (").append(toDate.getDayOfWeek().
+                            getDisplayName(TextStyle.FULL, new Locale("pl", "PL"))).append(")\n");
+
+
+            Duration between = Duration.between(fromDate.atStartOfDay(),toDate.atStartOfDay());
+            StringBuilder nonCalendar = getNonCalendarStringBuilder(between);
+
+            StringBuilder calendar = getCalendarStringBuilder(fromDate,toDate);
+
+            return info.toString()+nonCalendar.toString()+calendar.toString();
 
         } catch (DateTimeParseException e) {
             return ("*** " + e);
@@ -76,31 +98,46 @@ public class Time {
 
     }
 
+    private static StringBuilder getNonCalendarStringBuilder(Duration between) {
+        StringBuilder nonCalendar = new StringBuilder();
+        nonCalendar.append(" - mija: ");
+        if (between.toDays() == 1) {
+            nonCalendar.append("1 dzień,");
+        } else {
+            nonCalendar.append(between.toDays() + " dni,");
+        }
+
+        double weeks = (double) between.toDays() / 7.0;
+        nonCalendar.append(" tygodni ");
+        nonCalendar.append((double) Math.round(weeks * 100) / 100.0);
+        return nonCalendar;
+    }
+
     private static StringBuilder getCalendarStringBuilder(LocalDate tmpLocalDateFrom, LocalDate tmpLocalDateTo) {
         Period period = Period.between(tmpLocalDateFrom, tmpLocalDateTo);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("kalendarzowo: ");
+        sb.append("\n - kalendarzowo: ");
         if (period.getYears() == 1)
-            sb.append(1 + " rok ");
+            sb.append(1 + " rok, ");
         else if (period.getYears() > 1 && period.getYears() < 5) {
-            sb.append(period.getYears() + " lata ");
+            sb.append(period.getYears() + " lata, ");
         } else if (period.getYears() != 0) {
-            sb.append(period.getYears() + " lat ");
+            sb.append(period.getYears() + " lat, ");
         }
         if (period.getMonths() == 1)
-            sb.append(1 + " miesiąc ");
+            sb.append(1 + " miesiąc, ");
         else if (period.getMonths() > 1 && period.getMonths() < 5) {
-            sb.append(period.getMonths() + " miesiące ");
+            sb.append(period.getMonths() + " miesiące, ");
         } else if (period.getMonths() != 0) {
-            sb.append(period.getMonths() + " miesięcy ");
+            sb.append(period.getMonths() + " miesięcy, ");
         }
         if (period.getDays() == 1)
-            sb.append(1 + " dzień ");
+            sb.append(1 + " dzień");
         else if (period.getDays() != 0) {
-            sb.append(period.getDays() + " dni ");
+            sb.append(period.getDays() + " dni");
         }
-        sb.append("\n");
+//        sb.append("\n");
         return sb;
     }
 }
